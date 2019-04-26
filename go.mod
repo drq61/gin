@@ -1,4 +1,4 @@
-module github.com/gin-gonic/gin
+module github.com/wule61/gin
 
 go 1.12
 
