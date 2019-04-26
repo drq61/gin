@@ -13,7 +13,7 @@ import (
 	"path"
 	"sync"
 
-	"github.com/gin-gonic/gin/render"
+	"github.com/wule61/gin/render"
 )
 
 const defaultMultipartMemory = 32 << 20 // 32 MB

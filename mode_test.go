@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gin-gonic/gin/binding"
+	"github.com/wule61/gin/binding"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -10,7 +10,7 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/gin-gonic/gin/internal/json"
+	"github.com/wule61/gin/internal/json"
 )
 
 // JSON contains the given interface object.

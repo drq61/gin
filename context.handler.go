@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/gin-gonic/gin/binding"
+	"github.com/wule61/gin/binding"
 
 	"github.com/micro-plat/lib4go/encoding"
 )

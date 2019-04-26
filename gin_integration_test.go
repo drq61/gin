@@ -183,7 +183,7 @@ func TestWithHttptestWithAutoSelectedPort(t *testing.T) {
 func TestConcurrentHandleContext(t *testing.T) {
 	router := New()
 	router.GET("/", func(c *Context) {
-		c.Request.URL.Path = "/example"
+		c.request.URL.Path = "/example"
 		router.HandleContext(c)
 	})
 	router.GET("/example", func(c *Context) { c.String(http.StatusOK, "it worked") })

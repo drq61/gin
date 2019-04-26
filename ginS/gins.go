@@ -5,11 +5,11 @@
 package ginS
 
 import (
+	"github.com/wule61/gin"
 	"html/template"
 	"net/http"
 	"sync"
 
-	"github.com/gin-gonic/gin"
 )
 
 var once sync.Once
