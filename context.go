@@ -42,8 +42,10 @@ const abortIndex int8 = math.MaxInt8 / 2
 // manage the flow, validate the JSON of a request and render a JSON response for example.
 type Context struct {
 	writermem responseWriter
-	Request   *http.Request
+	request   *http.Request
 	Writer    ResponseWriter
+
+	Request *Request
 
 	Params   Params
 	handlers HandlersChain
@@ -187,6 +189,11 @@ func (c *Context) Error(err error) *Error {
 
 	c.Errors = append(c.Errors, parsedError)
 	return parsedError
+}
+
+// GetRequest is to get *http.Request
+func (c *Context) GetRequest() *http.Request {
+	return c.request
 }
 
 /************************************/
@@ -371,7 +378,7 @@ func (c *Context) QueryArray(key string) []string {
 // GetQueryArray returns a slice of strings for a given query key, plus
 // a boolean value whether at least one value exists for the given key.
 func (c *Context) GetQueryArray(key string) ([]string, bool) {
-	if values, ok := c.Request.URL.Query()[key]; ok && len(values) > 0 {
+	if values, ok := c.request.URL.Query()[key]; ok && len(values) > 0 {
 		return values, true
 	}
 	return []string{}, false
@@ -386,7 +393,7 @@ func (c *Context) QueryMap(key string) map[string]string {
 // GetQueryMap returns a map for a given query key, plus a boolean value
 // whether at least one value exists for the given key.
 func (c *Context) GetQueryMap(key string) (map[string]string, bool) {
-	return c.get(c.Request.URL.Query(), key)
+	return c.get(c.request.URL.Query(), key)
 }
 
 // PostForm returns the specified key from a POST urlencoded form or multipart form
@@ -430,7 +437,7 @@ func (c *Context) PostFormArray(key string) []string {
 // GetPostFormArray returns a slice of strings for a given form key, plus
 // a boolean value whether at least one value exists for the given key.
 func (c *Context) GetPostFormArray(key string) ([]string, bool) {
-	req := c.Request
+	req := c.request
 	if err := req.ParseMultipartForm(c.engine.MaxMultipartMemory); err != nil {
 		if err != http.ErrNotMultipart {
 			debugPrint("error on parse multipart form array: %v", err)
@@ -456,7 +463,7 @@ func (c *Context) PostFormMap(key string) map[string]string {
 // GetPostFormMap returns a map for a given form key, plus a boolean value
 // whether at least one value exists for the given key.
 func (c *Context) GetPostFormMap(key string) (map[string]string, bool) {
-	req := c.Request
+	req := c.request
 	if err := req.ParseMultipartForm(c.engine.MaxMultipartMemory); err != nil {
 		if err != http.ErrNotMultipart {
 			debugPrint("error on parse multipart form map: %v", err)
@@ -488,19 +495,19 @@ func (c *Context) get(m map[string][]string, key string) (map[string]string, boo
 
 // FormFile returns the first file for the provided form key.
 func (c *Context) FormFile(name string) (*multipart.FileHeader, error) {
-	if c.Request.MultipartForm == nil {
-		if err := c.Request.ParseMultipartForm(c.engine.MaxMultipartMemory); err != nil {
+	if c.request.MultipartForm == nil {
+		if err := c.request.ParseMultipartForm(c.engine.MaxMultipartMemory); err != nil {
 			return nil, err
 		}
 	}
-	_, fh, err := c.Request.FormFile(name)
+	_, fh, err := c.request.FormFile(name)
 	return fh, err
 }
 
 // MultipartForm is the parsed multipart form, including file uploads.
 func (c *Context) MultipartForm() (*multipart.Form, error) {
-	err := c.Request.ParseMultipartForm(c.engine.MaxMultipartMemory)
-	return c.Request.MultipartForm, err
+	err := c.request.ParseMultipartForm(c.engine.MaxMultipartMemory)
+	return c.request.MultipartForm, err
 }
 
 // SaveUploadedFile uploads the form file to specific dst.
@@ -530,7 +537,7 @@ func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dst string) error
 // It decodes the json payload into the struct specified as a pointer.
 // It writes a 400 error and sets Content-Type header "text/plain" in the response if input is not valid.
 func (c *Context) Bind(obj interface{}) error {
-	b := binding.Default(c.Request.Method, c.ContentType())
+	b := binding.Default(c.request.Method, c.ContentType())
 	return c.MustBindWith(obj, b)
 }
 
@@ -584,7 +591,7 @@ func (c *Context) MustBindWith(obj interface{}, b binding.Binding) error {
 // It decodes the json payload into the struct specified as a pointer.
 // Like c.Bind() but this method does not set the response status code to 400 and abort if the json is not valid.
 func (c *Context) ShouldBind(obj interface{}) error {
-	b := binding.Default(c.Request.Method, c.ContentType())
+	b := binding.Default(c.request.Method, c.ContentType())
 	return c.ShouldBindWith(obj, b)
 }
 
@@ -620,7 +627,7 @@ func (c *Context) ShouldBindUri(obj interface{}) error {
 // ShouldBindWith binds the passed struct pointer using the specified binding engine.
 // See the binding package.
 func (c *Context) ShouldBindWith(obj interface{}, b binding.Binding) error {
-	return b.Bind(c.Request, obj)
+	return b.Bind(c.request, obj)
 }
 
 // ShouldBindBodyWith is similar with ShouldBindWith, but it stores the request
@@ -636,7 +643,7 @@ func (c *Context) ShouldBindBodyWith(obj interface{}, bb binding.BindingBody) (e
 		}
 	}
 	if body == nil {
-		body, err = ioutil.ReadAll(c.Request.Body)
+		body, err = ioutil.ReadAll(c.request.Body)
 		if err != nil {
 			return err
 		}
@@ -666,7 +673,7 @@ func (c *Context) ClientIP() string {
 		}
 	}
 
-	if ip, _, err := net.SplitHostPort(strings.TrimSpace(c.Request.RemoteAddr)); err == nil {
+	if ip, _, err := net.SplitHostPort(strings.TrimSpace(c.request.RemoteAddr)); err == nil {
 		return ip
 	}
 
@@ -689,7 +696,7 @@ func (c *Context) IsWebsocket() bool {
 }
 
 func (c *Context) requestHeader(key string) string {
-	return c.Request.Header.Get(key)
+	return c.request.Header.Get(key)
 }
 
 /************************************/
@@ -732,7 +739,7 @@ func (c *Context) GetHeader(key string) string {
 
 // GetRawData return stream data.
 func (c *Context) GetRawData() ([]byte, error) {
-	return ioutil.ReadAll(c.Request.Body)
+	return ioutil.ReadAll(c.request.Body)
 }
 
 // SetCookie adds a Set-Cookie header to the ResponseWriter's headers.
@@ -758,7 +765,7 @@ func (c *Context) SetCookie(name, value string, maxAge int, path, domain string,
 // If multiple cookies match the given name, only one cookie will
 // be returned.
 func (c *Context) Cookie(name string) (string, error) {
-	cookie, err := c.Request.Cookie(name)
+	cookie, err := c.request.Cookie(name)
 	if err != nil {
 		return "", err
 	}
@@ -854,7 +861,7 @@ func (c *Context) Redirect(code int, location string) {
 	c.Render(-1, render.Redirect{
 		Code:     code,
 		Location: location,
-		Request:  c.Request,
+		Request:  c.request,
 	})
 }
 
@@ -878,14 +885,14 @@ func (c *Context) DataFromReader(code int, contentLength int64, contentType stri
 
 // File writes the specified file into the body stream in a efficient way.
 func (c *Context) File(filepath string) {
-	http.ServeFile(c.Writer, c.Request, filepath)
+	http.ServeFile(c.Writer, c.request, filepath)
 }
 
 // FileAttachment writes the specified file into the body stream in an efficient way
 // On the client side, the file will typically be downloaded with the given filename
 func (c *Context) FileAttachment(filepath, filename string) {
 	c.Writer.Header().Set("content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
-	http.ServeFile(c.Writer, c.Request, filepath)
+	http.ServeFile(c.Writer, c.request, filepath)
 }
 
 // SSEvent writes a Server-Sent Event into the body stream.

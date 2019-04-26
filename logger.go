@@ -233,8 +233,8 @@ func LoggerWithConfig(conf LoggerConfig) HandlerFunc {
 	return func(c *Context) {
 		// Start timer
 		start := time.Now()
-		path := c.Request.URL.Path
-		raw := c.Request.URL.RawQuery
+		path := c.request.URL.Path
+		raw := c.request.URL.RawQuery
 
 		// Process request
 		c.Next()
@@ -242,7 +242,7 @@ func LoggerWithConfig(conf LoggerConfig) HandlerFunc {
 		// Log only when path is not being skipped
 		if _, ok := skip[path]; !ok {
 			param := LogFormatterParams{
-				Request: c.Request,
+				Request: c.request,
 				isTerm:  isTerm,
 				Keys:    c.Keys,
 			}
@@ -252,7 +252,7 @@ func LoggerWithConfig(conf LoggerConfig) HandlerFunc {
 			param.Latency = param.TimeStamp.Sub(start)
 
 			param.ClientIP = c.ClientIP()
-			param.Method = c.Request.Method
+			param.Method = c.request.Method
 			param.StatusCode = c.Writer.Status()
 			param.ErrorMessage = c.Errors.ByType(ErrorTypePrivate).String()
 

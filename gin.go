@@ -156,7 +156,10 @@ func Default() *Engine {
 }
 
 func (engine *Engine) allocateContext() *Context {
-	return &Context{engine: engine}
+	return &Context{
+		engine:  engine,
+		Request: newRequest(),
+	}
 }
 
 // Delims sets template left and right delims and returns a Engine instance.
@@ -345,8 +348,10 @@ func (engine *Engine) RunFd(fd int) (err error) {
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	c := engine.pool.Get().(*Context)
 	c.writermem.reset(w)
-	c.Request = req
+	c.request = req
 	c.reset()
+
+	c.Request.reset(makeQueyStringData(c), makeFormData(c), makeParamsData(c), makeExtData(c))
 
 	engine.handleHTTPRequest(c)
 
@@ -365,11 +370,11 @@ func (engine *Engine) HandleContext(c *Context) {
 }
 
 func (engine *Engine) handleHTTPRequest(c *Context) {
-	httpMethod := c.Request.Method
-	rPath := c.Request.URL.Path
+	httpMethod := c.request.Method
+	rPath := c.request.URL.Path
 	unescape := false
-	if engine.UseRawPath && len(c.Request.URL.RawPath) > 0 {
-		rPath = c.Request.URL.RawPath
+	if engine.UseRawPath && len(c.request.URL.RawPath) > 0 {
+		rPath = c.request.URL.RawPath
 		unescape = engine.UnescapePathValues
 	}
 
@@ -438,9 +443,9 @@ func serveError(c *Context, code int, defaultMessage []byte) {
 }
 
 func redirectTrailingSlash(c *Context) {
-	req := c.Request
+	req := c.request
 	p := req.URL.Path
-	if prefix := path.Clean(c.Request.Header.Get("X-Forwarded-Prefix")); prefix != "." {
+	if prefix := path.Clean(c.request.Header.Get("X-Forwarded-Prefix")); prefix != "." {
 		p = prefix + "/" + req.URL.Path
 	}
 	code := http.StatusMovedPermanently // Permanent redirect, request with GET method
@@ -458,7 +463,7 @@ func redirectTrailingSlash(c *Context) {
 }
 
 func redirectFixedPath(c *Context, root *node, trailingSlash bool) bool {
-	req := c.Request
+	req := c.request
 	rPath := req.URL.Path
 
 	if fixedPath, ok := root.findCaseInsensitivePath(cleanPath(rPath), trailingSlash); ok {
